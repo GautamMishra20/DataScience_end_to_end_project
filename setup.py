@@ -21,7 +21,7 @@ setup(
     name='DataScience_project',
     version='0.0.1',
     author='Gautam Mishra',
-    author_email='g20autammishra1234@gmail',
+    author_email='g20autammishra1234@gmail.com',
     packages=find_packages(),
     install_requires=get_requirements('requirements.txt')
 )
