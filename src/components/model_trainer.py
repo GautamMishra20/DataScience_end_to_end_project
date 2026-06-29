@@ -1,6 +1,8 @@
 import os
 import sys
 import numpy as np
+import mlflow
+import mlflow.sklearn
 
 from dataclasses import dataclass
 
@@ -11,7 +13,7 @@ from sklearn.ensemble import (
     RandomForestRegressor
 )
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, mean_squared_error,mean_absolute_error
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.tree import DecisionTreeRegressor
 from xgboost import XGBRegressor
@@ -104,43 +106,50 @@ class ModelTrainer:
 
             }
             
-            logging.info("Evaluating all models")
+            db_path = os.path.join(os.getcwd(), "mlflow.db").replace("\\", "/")
+            mlflow.set_tracking_uri(f"sqlite:///{db_path}")
+            
+            mlflow.set_experiment("Student Performance Prediction")
 
-            model_report = evaluate_models(
-                X_train=X_train,
-                y_train=y_train,
-                X_test=X_test,
-                y_test=y_test,
-                models=models,
-                param=params,
-            )
+            with mlflow.start_run(run_name="Full Training Session"):
 
-            best_model_score = max(model_report.values())
+                logging.info("Evaluating all models")
+                model_report = evaluate_models(
+                    X_train=X_train, y_train=y_train,
+                    X_test=X_test,   y_test=y_test,
+                    models=models,   param=params,
+                )
 
-            best_model_name = max(model_report, key=model_report.get)
+                best_model_score = max(model_report.values())
+                best_model_name  = max(model_report, key=model_report.get)
+                best_model       = models[best_model_name]
 
-            best_model = models[best_model_name]
+                if best_model_score < 0.60:
+                    raise CustomException("No best model found.", sys)
 
-            if best_model_score < 0.60:
-                raise CustomException("No best model found.", sys)
+                logging.info(f"Best Model: {best_model_name} | R²: {best_model_score:.4f}")
 
-            logging.info(f"Best Model Found: {best_model_name}")
-            logging.info(f"Best Model Test R2 Score: {best_model_score}")
+                # Log best model summary to parent run
+                mlflow.log_param("best_model", best_model_name)
+                mlflow.log_metric("best_test_r2", best_model_score)
 
-            best_model.fit(X_train, y_train)
+                # Final metrics on best model
+                predicted = best_model.predict(X_test)
+                final_r2   = r2_score(y_test, predicted)
+                final_mae  = mean_absolute_error(y_test, predicted)
+                final_rmse = np.sqrt(mean_squared_error(y_test, predicted))
+
+                mlflow.log_metric("final_r2",   final_r2)
+                mlflow.log_metric("final_mae",  final_mae)
+                mlflow.log_metric("final_rmse", final_rmse)
 
             save_object(
                 file_path=self.model_trainer_config.trained_model_file_path,
                 obj=best_model
             )
 
-            predicted = best_model.predict(X_test)
-
-            r2_square = r2_score(y_test, predicted)
-
-            logging.info(f"Final R2 Score: {r2_square}")
-
-            return r2_square
+            logging.info(f"Final R² Score: {final_r2:.4f}")
+            return final_r2
             
         except Exception as e:
             raise CustomException(e,sys)
