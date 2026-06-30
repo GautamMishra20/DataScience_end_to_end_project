@@ -192,6 +192,17 @@ Open `http://localhost:5000`, fill in the student details, and get a predicted m
 
 ---
 
+## 🐳 Run with Docker
+
+Build and run the Flask prediction app in an isolated container — no local Python environment needed.
+
+\`\`\`bash
+docker build -t student-perf-predictor .
+docker run -p 5000:5000 student-perf-predictor
+\`\`\`
+
+Open \`http://localhost:5000\` to use the app. The image bundles only the trained model artifacts (\`model.pkl\`, \`preprocessor.pkl\`) and the Flask serving code — training is run separately and is not containerized, following standard ML production practice of decoupling offline training from online serving.
+
 ## 🌐 Web Application
 
 Built with **Flask**. The prediction form (`home.html`) takes:
@@ -260,7 +271,7 @@ This enables clean imports like `from src.components.model_trainer import ModelT
 - [x] Modular ingestion → transformation → training pipeline
 - [x] MLflow experiment tracking with nested runs and model registry
 - [x] SHAP explainability (summary, bar, waterfall plots)
-- [ ] Dockerized deployment
+- [x] Dockerized deployment
 - [ ] CI/CD with GitHub Actions
 - [ ] Data validation / drift monitoring
 
