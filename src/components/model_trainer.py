@@ -20,6 +20,7 @@ from xgboost import XGBRegressor
 
 from src.exception import CustomException
 from src.logger import logging
+from src.components.model_explainer import ModelExplainer
 
 from src.utils import save_object, evaluate_models
 
@@ -143,12 +144,21 @@ class ModelTrainer:
                 mlflow.log_metric("final_mae",  final_mae)
                 mlflow.log_metric("final_rmse", final_rmse)
 
-            save_object(
-                file_path=self.model_trainer_config.trained_model_file_path,
-                obj=best_model
-            )
+                save_object(
+                    file_path=self.model_trainer_config.trained_model_file_path,
+                    obj=best_model
+                )
 
-            logging.info(f"Final R² Score: {final_r2:.4f}")
+                explainer_obj = ModelExplainer()
+                explainer_obj.generate_shap_plots(
+                    test_df_path=os.path.join('artifact', 'test.csv')
+                )
+
+                shap_dir = os.path.join('artifact', 'shap_plots')
+                for plot_file in os.listdir(shap_dir):
+                    mlflow.log_artifact(os.path.join(shap_dir,plot_file), artifact_path="shap_plots")
+            
+            logging.info(f"Final r2 Score: {final_r2:.4f}")
             return final_r2
             
         except Exception as e:
