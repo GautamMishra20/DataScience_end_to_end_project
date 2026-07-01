@@ -11,3 +11,4 @@ flask
 # pickle
 mlflow
 shap
+pytest
